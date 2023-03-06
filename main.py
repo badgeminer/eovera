@@ -15,7 +15,16 @@ white.fill((255,255,255))
 class upd(Enum):
   click = auto()
   boom = auto()
-
+  det = auto()
+class uiData(Enum):
+   detonate = auto()
+   tnt = auto()
+class engtype(Enum):
+  NONE = 0
+  tnt = auto()
+class csrmd(Enum):
+   tnt = auto()
+   atk = auto()
 class assets:
   def __init__(self):
     self.detonate = pygame.transform.scale(pygame.image.load("assets/detonate.png"),(25,25))
@@ -51,13 +60,14 @@ class obj(pygame.sprite.Sprite):
 
     # Constructor. Pass in the color of the block,
     # and its x and y position
-    def __init__(self, img,x_y=(0,0)):
+    def __init__(self, img,x_y=(0,0),type=engtype.NONE):
        # Call the parent class (Sprite) constructor
        pygame.sprite.Sprite.__init__(self)
 
        # Create an image of the block, and fill it with a color.
        # This could also be an image loaded from the disk.
        self.image = img
+       self.type = type
 
        self.rect = self.image.get_rect()
        self.rect.topleft = x_y
@@ -73,12 +83,32 @@ class obj(pygame.sprite.Sprite):
         if self.rect.colliderect(pos):
           self.kill()
           score += 1
+      elif type == upd.det:
+         if self.type == engtype.tnt:
+            p = self.rect.center
+            arc.update(upd.boom,rect=(p[0]-20,p[1]-20,40,40))
+            self.kill()
+         
+
+class uiObj(obj):
+  def __init__(self, img,flag, x_y=(0, 0),type=engtype.NONE):
+      super().__init__(img, x_y,type)
+      self.flag = flag
+  def update(self,xy):
+     global cm
+     if self.rect.collidepoint(xy[0],xy[1]):
+        if self.flag == uiData.detonate:
+           eng.update(upd.det)
+        else:
+          if self.flag == uiData.tnt:
+            cm = csrmd.tnt
 
 
 arc.add(obj(white,(randint(2,398),randint(2,298))))
 arc.add(obj(white,(randint(2,398),randint(2,298))))
 tp = TextPrint()
 score = 0
+cm = csrmd.atk
 class text:
   def __init__(self,text):
     self.expire = 2
@@ -90,15 +120,16 @@ clk = pygame.time.Clock()
 
 asset = assets()
 
-eng.add(obj(asset.explosive,(50,200)))
-ui.add(obj(asset.explosive,(30,275)))
-ui.add(obj(asset.detonate,(0,275)))
+eng.add(obj(asset.explosive,(50,200),engtype.tnt))
+ui.add(uiObj(asset.explosive,uiData.tnt,(30,275)))
+ui.add(uiObj(asset.detonate,uiData.detonate,(0,275)))
 
 while True:
     delta = clk.tick(30)/1000
     tp.reset()
     scr.fill((0,0,5))
     tp.tprint(scr,"score:"+str(score))
+    tp.tprint(scr,str(cm))
     for i in textls:
       i.expire -= delta
       if i.expire > 0:
@@ -122,5 +153,7 @@ while True:
             score -= 5
             arc.update(upd.boom,rect=(p[0]-20,p[1]-20,40,40))
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            arc.update(upd.click,pos=event.pos)
+            if cm == csrmd.atk:
+              arc.update(upd.click,pos=event.pos)
+            ui.update(event.pos)
     pygame.display.update()
